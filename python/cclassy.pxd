@@ -92,6 +92,18 @@ cdef extern from "class.h":
         double Omega0_ncdm_tot
         double Omega0_lambda
         double Omega0_fld
+        
+        # Exotic DE 
+        short has_exo
+        double a_exo
+        double b_exo
+        double z_c_exo
+        double sigma_z_exo
+        double Omega0_exo
+        int index_bg_rho_exo
+        int index_bg_p_exo
+        int index_bg_w_exo
+        
         double w0_fld
         double wa_fld
         double cs2_fld

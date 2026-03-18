@@ -3370,8 +3370,39 @@ int input_read_parameters_species(struct file_content * pfc,
     if ((fabs(scf_lambda) < 3.)&&(pba->background_verbose>1)){
       printf("'scf_lambda' = %e < 3 won't be tracking (for exp quint) unless overwritten by tuning function.",scf_lambda);
     }
+      
   }
+ /** 9) Exotic transient dark energy */
+  {
+    int flag_a = _FALSE_;
+    double tmp_a = 0.0;
+    class_call(parser_read_double(pfc, "a_exo", &tmp_a, &flag_a, errmsg),
+               errmsg, errmsg);
+    if (flag_a == _TRUE_ && tmp_a != 0.0) {
+      pba->has_exo = _TRUE_;
+      pba->a_exo   = tmp_a;
 
+      int flag_b = _FALSE_;
+      class_call(parser_read_double(pfc, "b_exo", &pba->b_exo,
+                 &flag_b, errmsg), errmsg, errmsg);
+      if (flag_b == _FALSE_) pba->b_exo = 0.0;
+
+      int flag_zc = _FALSE_;
+      class_call(parser_read_double(pfc, "z_c_exo", &pba->z_c_exo,
+                 &flag_zc, errmsg), errmsg, errmsg);
+      if (flag_zc == _FALSE_) pba->z_c_exo = 30.0;
+
+      int flag_sz = _FALSE_;
+      class_call(parser_read_double(pfc, "sigma_z_exo", &pba->sigma_z_exo,
+                 &flag_sz, errmsg), errmsg, errmsg);
+      if (flag_sz == _FALSE_) pba->sigma_z_exo = 6.0;
+
+      pba->Omega0_exo = pba->a_exo
+                        * exp(-0.5 * pba->z_c_exo * pba->z_c_exo
+                              / (pba->sigma_z_exo * pba->sigma_z_exo));
+    }
+  }
+    
   return _SUCCESS_;
 
 }
@@ -5905,7 +5936,7 @@ int input_default_params(struct background *pba,
   /** 9) Dark energy contributions */
   pba->Omega0_fld = 0.;
   pba->Omega0_scf = 0.;
-  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr - pba->Omega0_idr -pba->Omega0_idm;
+  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr - pba->Omega0_idr - pba->Omega0_idm - pba->Omega0_exo;
   /** 8.a) Omega fluid */
   /** 8.a.1) PPF approximation */
   pba->use_ppf = _TRUE_;
@@ -5928,6 +5959,14 @@ int input_default_params(struct background *pba,
   pba->phi_prime_ini_scf = 1;          //     factors of the radiation attractor values
   /** 9.b.3) Tuning parameter */
   pba->scf_tuning_index = 0;
+    
+  /** 10) Exotic transient dark energy */
+  pba->has_exo     = _FALSE_;
+  pba->a_exo       = 0.0;
+  pba->b_exo       = 0.0;
+  pba->z_c_exo     = 30.0;
+  pba->sigma_z_exo = 6.0;
+  pba->Omega0_exo  = 0.0;
 
   /**
    * Deafult to input_read_parameters_heating

@@ -163,6 +163,10 @@ cdef class Class:
     def Omega_fld(self):
       """Return the fractional fluid density today"""
       return CallableFloat(self.ba.Omega0_fld)
+    
+    def Omega0_exo(self):
+    """Density parameter of exotic transient dark energy today (derived)"""
+    return self.ba.Omega0_exo
 
     # Other properties related to the background
     @property
@@ -345,8 +349,8 @@ cdef class Class:
         self.ncp = set()
         if default: self.set_default()
         try:
-          import importlib.resources
-          resource_path = abspath(importlib.resources.files('classy'))
+          import os as _os
+          resource_path = _os.path.dirname(_os.path.abspath(__file__))
         except ImportError as ie:
           resource_path = dirname(abspath(__file__))
         path_to_this_as_bytes = resource_path.encode()
