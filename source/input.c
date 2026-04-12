@@ -3231,28 +3231,33 @@ int input_read_parameters_species(struct file_content * pfc,
     
     {
   int flag_a = _FALSE_;
-  double tmp_a = 0.0;
-  class_call(parser_read_double(pfc, "a_exo", &tmp_a, &flag_a, errmsg),
-             errmsg, errmsg);
-  if (flag_a == _TRUE_ && tmp_a != 0.0) {
-    pba->has_exo = _TRUE_;
-    pba->a_exo   = tmp_a;
-    int flag_b = _FALSE_;
-    class_call(parser_read_double(pfc, "b_exo", &pba->b_exo, &flag_b, errmsg),
-               errmsg, errmsg);
-    if (flag_b == _FALSE_) pba->b_exo = 0.0;
-    int flag_zc = _FALSE_;
-    class_call(parser_read_double(pfc, "z_c_exo", &pba->z_c_exo, &flag_zc, errmsg),
-               errmsg, errmsg);
-    if (flag_zc == _FALSE_) pba->z_c_exo = 30.0;
-    int flag_sz = _FALSE_;
-    class_call(parser_read_double(pfc, "sigma_z_exo", &pba->sigma_z_exo, &flag_sz, errmsg),
-               errmsg, errmsg);
-    if (flag_sz == _FALSE_) pba->sigma_z_exo = 6.0;
-    pba->Omega0_exo = pba->a_exo
-                      * exp(-0.5 * pba->z_c_exo * pba->z_c_exo
-                            / (pba->sigma_z_exo * pba->sigma_z_exo));
-    Omega_tot += pba->Omega0_exo;
+  int flag_b = _FALSE_;
+  int flag_zc = _FALSE_;
+  int flag_sz = _FALSE_;
+
+
+  class_call(parser_read_double(pfc, "a_exo", &pba->a_exo, &flag_a, errmsg), errmsg, errmsg);
+  class_call(parser_read_double(pfc, "b_exo", &pba->b_exo, &flag_b, errmsg), errmsg, errmsg);
+  class_call(parser_read_double(pfc, "z_c_exo", &pba->z_c_exo, &flag_zc, errmsg), errmsg, errmsg);
+  class_call(parser_read_double(pfc, "sigma_z_exo", &pba->sigma_z_exo, &flag_sz, errmsg), errmsg, errmsg);
+
+
+  if (flag_a || flag_b || flag_zc || flag_sz) {
+      pba->has_exo = _TRUE_;
+
+
+      if (flag_a == _FALSE_)  pba->a_exo = -0.01; 
+      if (flag_b == _FALSE_)  pba->b_exo = 0.0;
+      if (flag_zc == _FALSE_) pba->z_c_exo = 16.0;
+      if (flag_sz == _FALSE_) pba->sigma_z_exo = 3.25;
+
+      // 4. Perform the physical calculations for the energy budget
+      // Omega_exo(z=0) = a_exo * exp(-0.5 * (zc/sigma)^2)
+      pba->Omega0_exo = pba->a_exo * exp(-0.5 * pba->z_c_exo * pba->z_c_exo 
+                                        / (pba->sigma_z_exo * pba->sigma_z_exo));
+
+      // Add to the total density budget
+      Omega_tot += pba->Omega0_exo;
   }
 }
     
@@ -5936,7 +5941,8 @@ int input_default_params(struct background *pba,
   /** 9) Dark energy contributions */
   pba->Omega0_fld = 0.;
   pba->Omega0_scf = 0.;
-  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr - pba->Omega0_idr - pba->Omega0_idm - pba->Omega0_exo;
+  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr - pba->Omega0_idr - pba->Omega0_idm - pba->Omega0_exo;   /* Exotic DE term subtracted! */ 
+    
   /** 8.a) Omega fluid */
   /** 8.a.1) PPF approximation */
   pba->use_ppf = _TRUE_;
@@ -5964,8 +5970,8 @@ int input_default_params(struct background *pba,
   pba->has_exo     = _FALSE_;
   pba->a_exo       = 0.0;
   pba->b_exo       = 0.0;
-  pba->z_c_exo     = 30.0;
-  pba->sigma_z_exo = 6.0;
+  pba->z_c_exo     = 16.0;  /* Both z_c and sigma_z determined by sigma_8 ratio run*/
+  pba->sigma_z_exo = 3.25;
   pba->Omega0_exo  = 0.0;
 
   /**
