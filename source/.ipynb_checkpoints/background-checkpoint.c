@@ -202,7 +202,7 @@ static double exo_rho_norm(double z, double a_exo, double b_exo,
 static double exo_w(double z, double a_exo, double b_exo,
                     double z_c, double sigma_z) {
   double amp = exo_amplitude(z, a_exo, b_exo);
-  if (fabs(amp) < 1.0e-30) return -1.0;  /* safeguard */
+  if (fabs(amp) < 1.0e-30) return (-1.0e-3);  /* safeguard against division by zero*/
   double term_b     = b_exo / amp;
   double term_gauss = ((1.0 + z) * (z_c - z)) / (sigma_z * sigma_z);
   return ((term_b + term_gauss) / 3.0) - 1.0;
@@ -212,7 +212,6 @@ static double exo_w(double z, double a_exo, double b_exo,
    Public function — compute rho_exo and p_exo in CLASS internal units.
 
    CLASS stores all densities in Mpc^{-2} with 8piG/3 = 1, so:
-     rho_crit,0 = 3 * H0^2
      rho_x^CLASS = 3 * H0^2 * Omega_x0 * W(z)
 
    Called from background_functions() at every ODE step, and will be
@@ -2633,6 +2632,11 @@ int background_output_titles(
     }
   }
   class_store_columntitle(titles,"(.)rho_lambda",pba->has_lambda);
+    /* Exotic DE */
+  class_store_columntitle(titles,"(.)rho_exo",pba->has_exo);
+  class_store_columntitle(titles,"(.)p_exo",pba->has_exo);
+  class_store_columntitle(titles,"w_exo",pba->has_exo);
+  
   class_store_columntitle(titles,"(.)rho_fld",pba->has_fld);
   class_store_columntitle(titles,"(.)w_fld",pba->has_fld);
   class_store_columntitle(titles,"(.)rho_ur",pba->has_ur);
@@ -2641,10 +2645,6 @@ int background_output_titles(
   class_store_columntitle(titles,"(.)rho_dcdm",pba->has_dcdm);
   class_store_columntitle(titles,"(.)rho_dr",pba->has_dr);
   
-  /* Exotic DE */
-  class_store_columntitle(titles,"(.)rho_exo",pba->has_exo);
-  class_store_columntitle(titles,"(.)p_exo",pba->has_exo);
-  class_store_columntitle(titles,"w_exo",pba->has_exo);
 
   class_store_columntitle(titles,"(.)rho_scf",pba->has_scf);
   class_store_columntitle(titles,"(.)p_scf",pba->has_scf);
