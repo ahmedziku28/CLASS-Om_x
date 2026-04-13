@@ -151,7 +151,7 @@ int background_exo_rho_and_p(struct background * pba,
                               double * rho_exo,
                               double * p_exo) {
 
-  if (pba->has_exo != _TRUE_) {
+  if (pba->has_exo != _TRUE_ || z > 150.0) {    // prevents the weird loga ~= -30 crashes, 150=z is about 41 sigmas away from z_c =16
     *rho_exo = 0.0;
     *p_exo   = 0.0;
     return _SUCCESS_;
