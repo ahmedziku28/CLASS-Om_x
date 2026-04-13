@@ -204,7 +204,6 @@ struct background
   /* pvecback slots for the exotic fluid */
   int index_bg_rho_exo;  /**< energy density rho_x(z) in CLASS units */
   int index_bg_p_exo;    /**< pressure P_x(z) = w_x * rho_x          */
-  int index_bg_w_exo;    /**< equation of state w_x(z) (diagnostic)  */
     
   int index_bg_Omega_r;       /**< relativistic density fraction (\f$ \Omega_{\gamma} + \Omega_{\nu r} \f$) */
 

@@ -3253,7 +3253,7 @@ int input_read_parameters_species(struct file_content * pfc,
 
       // 4. Perform the physical calculations for the energy budget
       // Omega_exo(z=0) = a_exo * exp(-0.5 * (zc/sigma)^2)
-      pba->Omega0_exo = pba->a_exo * exp(-0.5 * pba->z_c_exo * pba->z_c_exo 
+      pba->Omega0_exo = pba->a_exo * exp(-0.5 * (pba->z_c_exo * pba->z_c_exo)
                                         / (pba->sigma_z_exo * pba->sigma_z_exo));
 
       // Add to the total density budget
