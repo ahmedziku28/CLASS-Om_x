@@ -130,92 +130,21 @@
  */
 
 
-/* ==========================================================================
-   EXOTIC TRANSIENT DARK ENERGY — helper functions
-   Model:  rho_x(z) = [a + b*m(z)] * G(z)
-           m(z)    = z/(1+z)
-           G(z)     = exp(-(z-z_c)^2 / 2*sigma_z^2)
-   ========================================================================== */
-
 /* --------------------------------------------------------------------------
-   Gaussian envelope  G(z) = exp(-(z-z_c)^2 / 2*sigma_z^2)
-   -------------------------------------------------------------------------- */
-static double exo_gaussian(double z, double z_c, double sigma_z) {
-  double dz = z - z_c;
-  return exp(- (dz * dz) / (2 * sigma_z * sigma_z));
-}
+   Exotic transient dark energy  —  rho_exo in CLASS internal units.
 
-/* --------------------------------------------------------------------------
-   Amplitude factor  A(z) = a*(1+z) + b*z
-   With a<0 and |b|<|a|, A(z) is always negative — guarantees suppression.
-   -------------------------------------------------------------------------- */
-static double exo_amplitude(double z, double a_exo, double b_exo) {
-  return a_exo * (1.0 + z) + b_exo * z;
-}
+   CLASS convention: 8piG/3 = 1, so rho_crit,0 = H0^2.
 
-/* --------------------------------------------------------------------------
-   Window function  W(z):
+   Direct evaluation of the model definition:
+     rho_x(z) = H0^2 * [a_exo + b_exo * z/(1+z)] * exp(-(z-z_c)^2 / 2*sigma_z^2)
 
-     W(z) = [a(1+z) + b*z] / [a*(1+z)]
-            * exp( (z_c^2 - (z-z_c)^2) / (2*sigma_z^2) )
+   This is the algebraic simplification of Omega_x0 * W(z): the intermediate
+   Gaussian and amplitude factors cancel exactly, leaving one exp() call and
+   three multiplications. No helper functions needed.
 
-   Normalised so W(0) = 1 by construction.
-   The Friedmann contribution is  Omega_x0 * W(z).
-   -------------------------------------------------------------------------- */
-static double exo_window(double z, double a_exo, double b_exo,
-                          double z_c, double sigma_z) {
-  double amp_numer       = exo_amplitude(z, a_exo, b_exo);  /* a(1+z) + b*z      */
-  double amp_denom   = a_exo * (1.0 + z);               /* a*(1+z) denominator */
-
-  if (fabs(amp_denom) < 1.0e-30) return 1.0;  /* safeguard, never hit in practice */
-
-  double exponent = (z_c * z_c - ((z - z_c) * (z - z_c)))
-                    / (2.0 * sigma_z * sigma_z);
-
-  return ( (amp_numer / amp_denom) * exp(exponent) );
-}
-
-/* --------------------------------------------------------------------------
-   Dimensionless density  n(z) = Omega_x0 * W(z)
-
-   This is the quantity that enters H^2:
-     H^2 = H0^2 * [ ... + Omega_x0 * W(z) ]
-   -------------------------------------------------------------------------- */
-static double exo_rho_norm(double z, double a_exo, double b_exo,
-                            double z_c, double sigma_z) {
-  /* Omega_x0 = a * exp(-z_c^2 / 2*sigma_z^2) */
-  double Omega_x0 = a_exo * exo_gaussian(0.0, z_c, sigma_z);
-
-  double W = exo_window(z, a_exo, b_exo, z_c, sigma_z);
-
-  return Omega_x0 * W;
-}
-
-/* --------------------------------------------------------------------------
-   Equation of state  w_x(z)
-
-     w_x(z) = (1/3) * [ b/A(z)  +  (1+z)*(z_c-z)/sigma_z^2 ]  -  1
-
-   Derived analytically from the continuity equation.
-   Has NO dependence on Omega_x0 — shape and amplitude are fully decoupled.
-   -------------------------------------------------------------------------- */
-static double exo_w(double z, double a_exo, double b_exo,
-                    double z_c, double sigma_z) {
-  double amp = exo_amplitude(z, a_exo, b_exo);
-  if (fabs(amp) < 1.0e-30) return (-1.0e-3);  /* safeguard against division by zero*/
-  double term_b     = b_exo / amp;
-  double term_gauss = ((1.0 + z) * (z_c - z)) / (sigma_z * sigma_z);
-  return ((term_b + term_gauss) / 3.0) - 1.0;
-}
-
-/* --------------------------------------------------------------------------
-   Public function — compute rho_exo and p_exo in CLASS internal units.
-
-   CLASS stores all densities in Mpc^{-2} with 8piG/3 = 1, so:
-     rho_x^CLASS = 3 * H0^2 * Omega_x0 * W(z)
-
-   Called from background_functions() at every ODE step, and will be
-   called from perturbations.c when that module is added later.
+   p_exo is set to zero — the EOS is not required at background level and
+   perturbations are not yet implemented. Remove this note when adding
+   perturbations.c support.
    -------------------------------------------------------------------------- */
 int background_exo_rho_and_p(struct background * pba,
                               double z,
@@ -228,15 +157,12 @@ int background_exo_rho_and_p(struct background * pba,
     return _SUCCESS_;
   }
 
-  double norm  = exo_rho_norm(z,
-                               pba->a_exo, pba->b_exo,
-                               pba->z_c_exo, pba->sigma_z_exo);
-  *rho_exo = pba->H0 * pba->H0 * norm;
+  double dz           = z - pba->z_c_exo;
+  double inv_2sig2    = 1.0 / (2.0 * pba->sigma_z_exo * pba->sigma_z_exo);
+  double amp          = pba->a_exo + pba->b_exo * (z / (1.0 + z));
 
-  double w = exo_w(z,
-                   pba->a_exo, pba->b_exo,
-                   pba->z_c_exo, pba->sigma_z_exo);
-  *p_exo = w * (*rho_exo);
+  *rho_exo = pba->H0 * pba->H0 * amp * exp(-(dz * dz) * inv_2sig2);
+  *p_exo   = 0.0;
 
   return _SUCCESS_;
 }
@@ -649,23 +575,24 @@ int background_functions(
     p_tot -= pvecback[pba->index_bg_rho_lambda];
   }
     
-    /* Exotic DE dark energy */
-  if (pba->has_exo == _TRUE_) {
-    double z_bg    = 1.0/a - 1.0;
-    double rho_exo = 0.0;
-    double p_exo   = 0.0;
+    /* exotic DE dark energy */
 
-    class_call(background_exo_rho_and_p(pba, z_bg, &rho_exo, &p_exo),
-                 pba->error_message, pba->error_message);
-
-    pvecback[pba->index_bg_rho_exo] = rho_exo;
-    pvecback[pba->index_bg_p_exo]   = p_exo;
-    pvecback[pba->index_bg_w_exo]   = (fabs(rho_exo) > 1.0e-300)
-                                        ? p_exo / rho_exo
-                                        : -1.0;
-
-    rho_tot += rho_exo;
-    p_tot   += p_exo;
+   if (pba->has_exo == _TRUE_) {
+       
+      double a = pvecback[pba->index_bg_a];
+      double z = 1.0/a - 1.0;
+        
+      double rho_exo = 0.0;
+      double p_exo = 0.0;
+        
+    class_call(background_exo_rho_and_p(pba, z, &rho_exo, &p_exo),
+               pba->error_message, pba->error_message);
+        
+      pvecback[pba->index_bg_rho_exo] = rho_exo;
+      pvecback[pba->index_bg_p_exo]   = p_exo;
+      
+      rho_tot += rho_exo;   
+      p_tot += p_exo;
     }
 
   /* fluid with w(a) and constant cs2 */
@@ -945,22 +872,25 @@ int background_init(
   /* --- exotic fluid: physicality checks + derive Omega0_exo --- */
   if (pba->has_exo == _TRUE_) {
  
-    class_test(pba->a_exo >= 0.0,
-               pba->error_message,
-               "Exotic fluid: a_exo = %.6g must be negative (suppression).",
-               pba->a_exo);
+//     class_test(pba->a_exo >= 0.0,
+//                pba->error_message,
+//                "Exotic fluid: a_exo = %.6g must be negative (suppression).",
+//                pba->a_exo);
  
-    class_test(pba->b_exo >= fabs(pba->a_exo),
-               pba->error_message,
-               "Exotic fluid: b_exo = %.6g must satisfy |b_exo| < |a_exo| = %.6g "
-               "to prevent rho_x changing sign before z_c.",
-               pba->b_exo, fabs(pba->a_exo));
+//     class_test(pba->b_exo >= fabs(pba->a_exo),
+//                pba->error_message,
+//                "Exotic fluid: b_exo = %.6g must satisfy |b_exo| < |a_exo| = %.6g "
+//                "to prevent rho_x changing sign before z_c.",
+//                pba->b_exo, fabs(pba->a_exo));
+
+// all the above constraints now enforced in the prior
  
     /* Omega_x0 = a_exo * exp(-zc^2 / 2*sz^2)
-     * With zc=30, sz=6: suppress = exp(-12.5) ~ 3.7e-6
-     * So even a_exo=-10000 gives Omega_x0 ~ -0.037 — tiny today. */
-    double suppress = exp(-0.5 * pba->z_c_exo * pba->z_c_exo
-                          / (pba->sigma_z_exo * pba->sigma_z_exo));
+     * With zc=16, sz=3.25: suppress = exp(-12.5) ~ 5.46e-6
+     * So even a_exo=-10000 gives Omega_x0 ~ -0.0054 — tiny today. */
+     
+    double suppress = exp(-0.5 * pow(pba->z_c_exo,2)
+                          / (pow(pba->sigma_z_exo,2)));
     pba->Omega0_exo = pba->a_exo * suppress;
  
     if (pba->background_verbose > 0) {
@@ -1247,8 +1177,7 @@ int background_indices(
   /* - index for Exotic DE */
   class_define_index(pba->index_bg_rho_exo, pba->has_exo, index_bg, 1);
   class_define_index(pba->index_bg_p_exo,   pba->has_exo, index_bg, 1);
-  class_define_index(pba->index_bg_w_exo,   pba->has_exo, index_bg, 1);
-
+  
   /* - index for fluid */
   class_define_index(pba->index_bg_rho_fld,pba->has_fld,index_bg,1);
   class_define_index(pba->index_bg_w_fld,pba->has_fld,index_bg,1);
@@ -2632,10 +2561,10 @@ int background_output_titles(
     }
   }
   class_store_columntitle(titles,"(.)rho_lambda",pba->has_lambda);
+  
     /* Exotic DE */
   class_store_columntitle(titles,"(.)rho_exo",pba->has_exo);
   class_store_columntitle(titles,"(.)p_exo",pba->has_exo);
-  class_store_columntitle(titles,"w_exo",pba->has_exo);
   
   class_store_columntitle(titles,"(.)rho_fld",pba->has_fld);
   class_store_columntitle(titles,"(.)w_fld",pba->has_fld);
@@ -2718,7 +2647,7 @@ int background_output_data(
     /* Exotic DE dark energy*/
     class_store_double(dataptr, pvecback[pba->index_bg_rho_exo], pba->has_exo, storeidx);
     class_store_double(dataptr, pvecback[pba->index_bg_p_exo],   pba->has_exo, storeidx);
-    class_store_double(dataptr, pvecback[pba->index_bg_w_exo],   pba->has_exo, storeidx);
+
 
     class_store_double(dataptr,pvecback[pba->index_bg_rho_fld],pba->has_fld,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_w_fld],pba->has_fld,storeidx);

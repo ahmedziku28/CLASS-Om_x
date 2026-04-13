@@ -103,6 +103,17 @@ struct background
   double Omega0_lambda;    /**< \f$ \Omega_{0_\Lambda} \f$: cosmological constant */
   double Omega0_fld;       /**< \f$ \Omega_{0 de} \f$: fluid */
   double Omega0_scf;       /**< \f$ \Omega_{0 scf} \f$: scalar field */
+    
+  /* ---------------------------------------------------------------
+   * Exotic transient dark energy  (rho_x Gaussian model)
+   * --------------------------------------------------------------- */
+  short   has_exo;          /**< _TRUE_ if exotic fluid is active    */
+  double  a_exo;            /**< amplitude param a  (must be < 0)    */
+  double  b_exo;            /**< shape param b  (must satisfy |b|<|a|) */
+  double  z_c_exo;          /**< Gaussian centre  (fixed ~30)        */
+  double  sigma_z_exo;      /**< Gaussian width   (fixed ~6)         */
+  double  Omega0_exo;       /**< rho_x(z=0)/rho_crit,0  (derived)   */
+    
   short use_ppf; /**< flag switching on PPF perturbation equations instead of true fluid equations for perturbations. It could have been defined inside
                     perturbation structure, but we leave it here in such way to have all fld parameters grouped. */
   double c_gamma_over_c_fld; /**< ppf parameter defined in eq. (16) of 0808.3125 [astro-ph] */
@@ -190,6 +201,10 @@ struct background
   int index_bg_p_tot;         /**< Total pressure */
   int index_bg_p_tot_prime;   /**< Conf. time derivative of total pressure */
 
+  /* pvecback slots for the exotic fluid */
+  int index_bg_rho_exo;  /**< energy density rho_x(z) in CLASS units */
+  int index_bg_p_exo;    /**< pressure P_x(z) = w_x * rho_x          */
+    
   int index_bg_Omega_r;       /**< relativistic density fraction (\f$ \Omega_{\gamma} + \Omega_{\nu r} \f$) */
 
   /* end of vector in normal format, now quantities in long format */

@@ -102,7 +102,6 @@ cdef extern from "class.h":
         double Omega0_exo
         int index_bg_rho_exo
         int index_bg_p_exo
-        int index_bg_w_exo
         
         double w0_fld
         double wa_fld
